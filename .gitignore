@@ -46,3 +46,5 @@ data/faiss_index/
 # Local development
 .DS_Store
 Thumbs.db
+
+migration.py

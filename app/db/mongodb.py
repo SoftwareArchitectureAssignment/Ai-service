@@ -11,5 +11,4 @@ try:
     client.admin.command('ping')
     db = client[settings.DB_NAME]
 except Exception as e:
-    # In server startup, we let exceptions surface; FastAPI will show error
     raise
