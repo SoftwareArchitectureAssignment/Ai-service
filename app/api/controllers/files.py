@@ -1,17 +1,19 @@
+import logging
 from fastapi import APIRouter, HTTPException
 from typing import List
 from datetime import datetime
 import hashlib
-from app.schemas.files import FileMetadata
+from app.schemas.files import FileMetadata, FileInfoResponse, FileListResponse, ProcessFilesResponse
 from app.services.pdf import process_files_from_urls
 from app.services.rag import delete_vectors_by_file_id
-
-from app.db.mongodb import db
+from app.core.mongodb import db
 from bson import ObjectId
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.post("/register-files")
+@router.post("/register-files", response_model=List[FileInfoResponse])
 async def register_files(files_metadata: List[FileMetadata]):
     try:
         file_infos = []
@@ -36,26 +38,28 @@ async def register_files(files_metadata: List[FileMetadata]):
             file_info["_id"] = str(result.inserted_id)
             file_infos.append(file_info)
 
-        return {"message": "Files registered successfully", "files": file_infos}
+        return file_infos
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/pdf-files")
-async def list_pdf_files():
+@router.get("/pdf-files", response_model=List[FileListResponse])
+async def list_pdf_files(user_id: str):
     try:
-        query = {}
+        query = {"user_id": user_id} if user_id else {}
 
         files = list(db.files.find(query))
-        for file in files:
-            file["_id"] = str(file["_id"])
-
-        return {"files": files}
+        result = []
+        for doc in files:
+            doc["file_id"] = str(doc["_id"])
+            doc.pop("_id")
+            result.append(doc)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/pdf-files/{file_id}")
+@router.delete("/pdf-files/{file_id}", response_model=bool)
 async def delete_pdf_file(file_id: str):
     try:
 
@@ -66,12 +70,12 @@ async def delete_pdf_file(file_id: str):
 
         delete_vectors_by_file_id(file_id)
         
-        return {"message": "PDF file and its vectors deleted successfully"}
+        return True
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/process-files")
+@router.post("/process-files", response_model=ProcessFilesResponse)
 async def process_files():
     try:
         query = {"embedding_created": False}
@@ -83,10 +87,6 @@ async def process_files():
         
         download_urls = [(f["download_url"], f["url_hash"]) for f in unprocessed_files]
         processed_count = await process_files_from_urls(download_urls, db)
-        
-        return {
-            "message": f"Successfully processed {processed_count} files",
-            "processed_count": processed_count
-        }
+        return  {"processed_count": processed_count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

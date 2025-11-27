@@ -4,7 +4,7 @@ from typing import Optional
 from redis.asyncio import Redis
 from app.schemas.course_event import CourseUpdateEvent
 from app.core.config import settings
-from app.services.course_embedding import CourseEmbeddingService
+from app.core.container import container
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,8 @@ class CourseEventConsumer:
         self.consumer_group = "ai-service-group"
         self.consumer_name = "ai-service-consumer-1"
         self.running = False
+        # Initialize embedding service from container
+        self.embedding_service = container.get_embedding_service()
 
     async def connect(self) -> None:
         """Initialize Redis connection."""
@@ -84,7 +86,7 @@ class CourseEventConsumer:
             
             if event.action == "CREATE":
                 # Ingest new course into FAISS
-                success = await CourseEmbeddingService.ingest_course(
+                success = await self.embedding_service.ingest_course(
                     course_id=event.courseId,
                     course_name=event.courseName,
                     description=event.courseDescription
@@ -98,7 +100,7 @@ class CourseEventConsumer:
                 
             elif event.action == "UPDATE":
                 # Update existing course embeddings
-                success = await CourseEmbeddingService.update_course_embedding(
+                success = await self.embedding_service.update_course(
                     course_id=event.courseId,
                     course_name=event.courseName,
                     description=event.courseDescription
@@ -112,7 +114,7 @@ class CourseEventConsumer:
                 
             elif event.action == "DELETE":
                 # Remove course embeddings from FAISS
-                success = await CourseEmbeddingService.delete_course_embedding(
+                success = await self.embedding_service.delete_course(
                     course_id=event.courseId
                 )
                 
@@ -121,11 +123,12 @@ class CourseEventConsumer:
                 else:
                     logger.error(f"❌ Failed to delete embeddings for course {event.courseId}")
                 return success
-            
             else:
                 logger.warning(f"Unknown action: {event.action}")
                 return False
-                
+        except Exception as e:
+            logger.error(f"Error processing event: {e}", exc_info=True)
+            return False
         except Exception as e:
             logger.error(f"Error processing event for course {event.courseId}: {e}", exc_info=True)
             return False

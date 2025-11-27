@@ -1,5 +1,6 @@
 import os
 import logging
+import datetime
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional
@@ -7,7 +8,7 @@ from app.services.course_event_consumer import consumer
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter()
 
 
 class HealthResponse(BaseModel):
@@ -65,7 +66,6 @@ async def health_check():
             faiss_status["index_size_mb"] = round(file_size / (1024 * 1024), 2)
             
             # Get last modified time
-            import datetime
             mod_time = os.path.getmtime(index_path)
             faiss_status["last_modified"] = datetime.datetime.fromtimestamp(mod_time).isoformat()
         
@@ -98,12 +98,6 @@ async def health_check():
 
 @router.get("/redis", response_model=ConsumerStatusResponse)
 async def redis_status():
-    """
-    Get Redis Stream consumer status.
-    
-    Returns:
-        ConsumerStatusResponse with consumer connection details
-    """
     return ConsumerStatusResponse(
         is_running=consumer.running,
         is_connected=consumer.redis is not None,
@@ -115,12 +109,6 @@ async def redis_status():
 
 @router.get("/faiss", response_model=FAISSStatusResponse)
 async def faiss_status():
-    """
-    Get FAISS vector store status.
-    
-    Returns:
-        FAISSStatusResponse with index details
-    """
     index_path = os.path.join(settings.FAISS_INDEX_DIR, "index.faiss")
     
     response = FAISSStatusResponse(
@@ -134,7 +122,6 @@ async def faiss_status():
         response.index_size_mb = round(file_size / (1024 * 1024), 2)
         
         # Get last modified time
-        import datetime
         mod_time = os.path.getmtime(index_path)
         response.last_modified = datetime.datetime.fromtimestamp(mod_time).isoformat()
     
