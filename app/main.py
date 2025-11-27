@@ -17,7 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Legacy routes (deprecated but kept for backward compatibility)
 app.include_router(api_router, prefix="/ai")
 
 @app.on_event("startup")

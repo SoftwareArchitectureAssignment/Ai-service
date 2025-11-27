@@ -12,7 +12,6 @@ router = APIRouter()
 
 
 class HealthResponse(BaseModel):
-    """Health check response model"""
     status: str  # "healthy" or "unhealthy"
     redis_consumer: dict
     faiss_index: dict
@@ -20,7 +19,6 @@ class HealthResponse(BaseModel):
 
 
 class ConsumerStatusResponse(BaseModel):
-    """Consumer status response"""
     is_running: bool
     is_connected: bool
     stream_key: str
@@ -29,7 +27,6 @@ class ConsumerStatusResponse(BaseModel):
 
 
 class FAISSStatusResponse(BaseModel):
-    """FAISS index status response"""
     index_exists: bool
     index_path: str
     index_size_mb: Optional[float] = None
@@ -38,22 +35,13 @@ class FAISSStatusResponse(BaseModel):
 
 @router.get("/", response_model=HealthResponse)
 async def health_check():
-    """
-    Get overall health status of the AI service.
-    
-    Returns:
-        HealthResponse with status of Redis consumer and FAISS index
-    """
     try:
-        # Check Redis consumer status
         consumer_status = {
             "is_running": consumer.running,
             "is_connected": consumer.redis is not None,
             "stream_key": consumer.stream_key,
             "consumer_group": consumer.consumer_group
         }
-        
-        # Check FAISS index status
         index_path = os.path.join(settings.FAISS_INDEX_DIR, "index.faiss")
         faiss_status = {
             "index_exists": os.path.exists(index_path),
@@ -61,11 +49,9 @@ async def health_check():
         }
         
         if faiss_status["index_exists"]:
-            # Get file size
             file_size = os.path.getsize(index_path)
             faiss_status["index_size_mb"] = round(file_size / (1024 * 1024), 2)
             
-            # Get last modified time
             mod_time = os.path.getmtime(index_path)
             faiss_status["last_modified"] = datetime.datetime.fromtimestamp(mod_time).isoformat()
         
@@ -80,20 +66,7 @@ async def health_check():
         
     except Exception as e:
         logger.error(f"Error during health check: {e}")
-        return HealthResponse(
-            status="unhealthy",
-            redis_consumer={
-                "is_running": False,
-                "is_connected": False,
-                "stream_key": consumer.stream_key,
-                "consumer_group": consumer.consumer_group
-            },
-            faiss_index={
-                "index_exists": False,
-                "index_path": os.path.join(settings.FAISS_INDEX_DIR, "index.faiss")
-            },
-            overall_status="unhealthy"
-        )
+        raise e
 
 
 @router.get("/redis", response_model=ConsumerStatusResponse)
@@ -117,11 +90,9 @@ async def faiss_status():
     )
     
     if response.index_exists:
-        # Get file size
         file_size = os.path.getsize(index_path)
         response.index_size_mb = round(file_size / (1024 * 1024), 2)
         
-        # Get last modified time
         mod_time = os.path.getmtime(index_path)
         response.last_modified = datetime.datetime.fromtimestamp(mod_time).isoformat()
     

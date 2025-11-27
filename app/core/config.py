@@ -12,7 +12,6 @@ class Settings(BaseSettings):
     FAISS_INDEX_DIR: str = "data/faiss_index"
     
     # Redis Stream configuration
-    # Support both URL format (Redis Cloud) and individual host/port/password
     REDIS_URL: str | None = None
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379

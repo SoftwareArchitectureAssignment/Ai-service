@@ -7,33 +7,26 @@ from app.core.container import container
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Get service from container
 chat_service = container.get_chat_service()
 
 
 @router.post("/evaluate", response_model=ChatResponse)
 async def evaluate(request: ChatRequest) -> ChatResponse:
-    """Evaluate a question using RAG-based chat service."""
-    try:
-        answer = await chat_service.evaluate_question(
-            request.question,
-            request.question_uid
-        )
-        return ChatResponse(
-            answer=answer,
-            question_uid=request.question_uid,
-            timestamp=settings.now_string(),
-            model_name=settings.MODEL_NAME
-        )
-    except Exception as e:
-        logger.error(f"Error evaluating question: {e}")
-        raise
+    answer = await chat_service.evaluate_question(
+        request.question,
+        request.question_uid
+    )
+    return ChatResponse(
+        answer=answer,
+        question_uid=request.question_uid,
+        timestamp=settings.now_string(),
+        model_name=settings.MODEL_NAME
+    )
+    
 
 
 @router.post("/learning-path", response_model=LearningPathResponse)
 async def get_learning_path(request: LearningPathRequest) -> LearningPathResponse:
-    """Generate learning path recommendations for topics."""
-    try:
         learning_path = await chat_service.get_learning_path(
             request.topics,
             request.level,
@@ -44,7 +37,3 @@ async def get_learning_path(request: LearningPathRequest) -> LearningPathRespons
             recommendedLearningPaths=learning_path.get("recommendedLearningPaths", []),
             explanation=learning_path.get("explanation", "")
         )
-    except Exception as e:
-        logger.error(f"Error generating learning path: {e}")
-        raise
-        
