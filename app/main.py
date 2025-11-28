@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers.routers import api_router
 from app.services.course_event_consumer import start_consumer, stop_consumer
+from app.services.file_event_consumer import start_file_consumer, stop_file_consumer
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +22,10 @@ app.include_router(api_router, prefix="/ai")
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize Redis Stream consumer on startup."""
+    """Initialize Redis Stream consumers on startup."""
     try:
         await start_consumer()
+        await start_file_consumer()
         logger.info("Application startup completed")
     except Exception as e:
         
@@ -32,9 +34,10 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Gracefully shutdown Redis Stream consumer."""
+    """Gracefully shutdown Redis Stream consumers."""
     try:
         await stop_consumer()
+        await stop_file_consumer()
         logger.info("Application shutdown completed")
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")

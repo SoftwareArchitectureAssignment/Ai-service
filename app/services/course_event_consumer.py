@@ -27,7 +27,6 @@ class CourseEventConsumer:
                     socket_connect_timeout=5,
                     socket_keepalive=True,
                 )
-                connection_info = "Render Redis Cloud"
             else:
                 logger.info(f"Connecting to Redis via host/port")
                 self.redis = await Redis(
@@ -41,9 +40,6 @@ class CourseEventConsumer:
                         1: (9, 3, 3),
                     }
                 )
-                connection_info = f"{settings.REDIS_HOST}:{settings.REDIS_PORT}"
-            
-            # Test connection
             await self.redis.ping()
         except Exception as e:
             logger.error(f"Failed to connect to Redis: {e}")
@@ -144,7 +140,7 @@ class CourseEventConsumer:
                 
             except Exception as e:
                 logger.error(f"Error in consumer loop: {e}")
-                # Reconnect on error
+                
                 try:
                     await self.redis.ping()
                 except:

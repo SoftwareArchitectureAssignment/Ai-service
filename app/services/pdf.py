@@ -46,7 +46,6 @@ def delete_temp_file(file_path: str):
 
 async def process_files_from_urls(download_urls: List[Tuple[str, str]], db) -> int:
     processed_count = 0
-    all_text_chunks = []
     
     for url, url_hash in download_urls:
         temp_file_path = None
@@ -64,14 +63,23 @@ async def process_files_from_urls(download_urls: List[Tuple[str, str]], db) -> i
                 continue
             
             chunks = get_text_chunks(text, settings.MODEL_NAME)
-            all_text_chunks.extend(chunks)
             
+            file_doc = db.files.find_one({"url_hash": url_hash})
+            if not file_doc:
+                print(f"File document not found for {url_hash}, skipping...")
+                continue
+            
+            file_id = str(file_doc.get("_id", url_hash))
+            
+            # Insert into processed_files collection
             db.processed_files.insert_one({
                 "url_hash": url_hash,
+                "file_id": file_id,
                 "processed_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 "chunks_count": len(chunks)
             })
             
+            # Update file document to mark embedding as created
             db.files.update_one(
                 {"url_hash": url_hash},
                 {"$set": {
@@ -80,18 +88,26 @@ async def process_files_from_urls(download_urls: List[Tuple[str, str]], db) -> i
                 }}
             )
             
-            processed_count += 1
-            print(f"Successfully processed file from {url}")
+            # Create vector store for this file with metadata tracking
+            print(f"Creating vector store with {len(chunks)} chunks for file {file_id}...")
+            try:
+                get_vector_store(chunks, settings.MODEL_NAME, settings.API_KEY, file_id=file_id, url_hash=url_hash)
+                processed_count += 1
+                print(f"Successfully processed file from {url}")
+            except Exception as e:
+                print(f"Error creating vector store for {url}: {e}")
+                # Roll back the processed_files entry
+                db.processed_files.delete_one({"url_hash": url_hash})
+                db.files.update_one(
+                    {"url_hash": url_hash},
+                    {"$set": {"embedding_created": False}}
+                )
             
         except Exception as e:
             print(f"Error processing file from {url}: {e}")
         finally:
             if temp_file_path:
                 delete_temp_file(temp_file_path)
-    
-    if all_text_chunks:
-        print(f"Creating vector store with {len(all_text_chunks)} chunks...")
-        get_vector_store(all_text_chunks, settings.MODEL_NAME, settings.API_KEY)
     
     return processed_count
 

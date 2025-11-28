@@ -10,21 +10,18 @@ logger = logging.getLogger(__name__)
 
 
 class FAISSEmbeddingRepository(IEmbeddingRepository):
-    """FAISS vector store implementation for embeddings."""
     
     def __init__(self):
         self.index_dir = settings.FAISS_INDEX_DIR
         self.api_key = settings.API_KEY
     
     def _get_embeddings_model(self):
-        """Get embeddings model instance."""
         return GoogleGenerativeAIEmbeddings(
             model="models/embedding-001",
             google_api_key=self.api_key
         )
     
     async def save_embeddings(self, texts: list[str], metadatas: list[dict]) -> bool:
-        """Save embeddings to vector store."""
         try:
             logger.info(f"Saving {len(texts)} embeddings to FAISS")
             
@@ -33,10 +30,8 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
             
             index_path = os.path.join(self.index_dir, "index.faiss")
             
-            # Check if index exists
             if os.path.exists(index_path):
                 try:
-                    # Load and update existing index
                     vector_store = FAISS.load_local(
                         self.index_dir,
                         embeddings,
@@ -51,7 +46,6 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
                     vector_store.save_local(self.index_dir)
                     logger.info(f"Created new FAISS index with {len(texts)} texts")
             else:
-                # Create new index
                 vector_store = FAISS.from_texts(texts, embedding=embeddings, metadatas=metadatas)
                 vector_store.save_local(self.index_dir)
                 logger.info(f"Created new FAISS index with {len(texts)} texts")
@@ -62,7 +56,6 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
             return False
     
     async def load_embeddings(self) -> Optional[object]:
-        """Load embeddings from vector store."""
         try:
             embeddings = self._get_embeddings_model()
             index_path = os.path.join(self.index_dir, "index.faiss")
@@ -83,7 +76,6 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
             return None
     
     async def search_similar(self, query: str, k: int = 5) -> list[object]:
-        """Search for similar documents."""
         try:
             vector_store = await self.load_embeddings()
             if not vector_store:
@@ -98,7 +90,6 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
             return []
     
     async def delete_embeddings(self, course_id: int) -> bool:
-        """Delete embeddings for a course."""
         try:
             logger.info(f"Deleting embeddings for course {course_id}")
             
@@ -115,10 +106,8 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
                 allow_dangerous_deserialization=True
             )
             
-            # Get docstore
             docstore = vector_store.docstore._dict if hasattr(vector_store.docstore, '_dict') else {}
             
-            # Collect remaining documents
             remaining_texts = []
             remaining_metadatas = []
             deleted_count = 0
@@ -127,7 +116,6 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
                 metadata = getattr(doc, 'metadata', {}) or {}
                 
                 if str(metadata.get('course_id')) != str(course_id):
-                    # Keep this document
                     remaining_texts.append(doc.page_content if hasattr(doc, 'page_content') else str(doc))
                     remaining_metadatas.append(metadata)
                 else:
@@ -138,7 +126,6 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
                 return True
             
             if not remaining_texts:
-                # Delete index files
                 index_path = os.path.join(self.index_dir, "index.faiss")
                 pkl_path = os.path.join(self.index_dir, "index.pkl")
                 
@@ -150,7 +137,6 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
                 logger.info(f"Cleared FAISS index (deleted {deleted_count} vectors)")
                 return True
             
-            # Rebuild index
             new_vector_store = FAISS.from_texts(remaining_texts, embedding=embeddings, metadatas=remaining_metadatas)
             new_vector_store.save_local(self.index_dir)
             
@@ -161,6 +147,5 @@ class FAISSEmbeddingRepository(IEmbeddingRepository):
             return False
     
     async def exists(self) -> bool:
-        """Check if embeddings exist."""
         index_path = os.path.join(self.index_dir, "index.faiss")
         return os.path.exists(index_path)

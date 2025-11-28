@@ -6,12 +6,12 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.output_parsers import StrOutputParser
 from app.core.config import settings
 from app.interfaces.embedding_repository import IEmbeddingRepository
+from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
 
 class ChatService:
-    """Service for handling chat and learning path queries."""
     
     def __init__(self, repository: IEmbeddingRepository):
         self.repository = repository
@@ -19,27 +19,21 @@ class ChatService:
         self.model_name = settings.MODEL_NAME
     
     async def evaluate_question(self, question: str, question_uid: str) -> str:
-        """Evaluate a question using RAG with course embeddings."""
         try:
             logger.info(f"Evaluating question: {question}")
             
             if not self.api_key:
-                raise ValueError("API key not configured")
-            
-            # Check if embeddings exist
+                raise HTTPException(status_code=400, detail="API key not configured")
             if not await self.repository.exists():
-                raise ValueError("No course embeddings found. Please upload courses first.")
+                raise HTTPException(status_code=404, detail="No course embeddings found. Please upload courses first.")
             
-            # Search for similar documents
             docs = await self.repository.search_similar(question, k=5)
             
             if not docs:
-                raise ValueError("No relevant courses found for this question.")
+                raise HTTPException(status_code=404, detail="No relevant courses found for this question.")
             
-            # Format context from documents
             context = "\n\n".join([doc.page_content for doc in docs])
             
-            # Create prompt
             prompt_template = """
             Based on the provided course information, answer the following question.
             
@@ -51,7 +45,6 @@ class ChatService:
             Please provide a helpful answer based on the available course information.
             """
             
-            # Initialize model and create chain
             model = ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash-lite",
                 temperature=0.3,
@@ -65,7 +58,6 @@ class ChatService:
             
             chain = prompt | model | StrOutputParser()
             
-            # Generate response
             response = chain.invoke({
                 "context": context,
                 "question": question
@@ -78,27 +70,22 @@ class ChatService:
             raise
     
     async def get_learning_path(self, topics: str, level: Optional[str], questions: str) -> dict:
-        """Generate learning path based on topics and requirements."""
         try:
             logger.info(f"Generating learning path for topics: {topics}")
             
             if not self.api_key:
-                raise ValueError("API key not configured")
+                raise HTTPException(status_code=400, detail="API key not configured")
             
-            # Check if embeddings exist
             if not await self.repository.exists():
-                raise ValueError("No course embeddings found. Please upload courses first.")
+                raise HTTPException(status_code=404, detail="No course embeddings found. Please upload courses first.")
             
-            # Search for relevant courses
             docs = await self.repository.search_similar(topics, k=5)
             
             if not docs:
-                raise ValueError("No relevant courses found for these topics.")
+                raise HTTPException(status_code=404, detail="No relevant courses found for these topics.")
             
-            # Format context
             context = "\n\n".join([doc.page_content for doc in docs])
             
-            # Create prompt for learning path
             prompt_template = """
             Based on the provided course catalog and learning requirements, create a comprehensive learning path.
             
@@ -128,7 +115,6 @@ class ChatService:
             }}
             """
             
-            # Initialize model and create chain
             model = ChatGoogleGenerativeAI(
                 model="gemini-2.5-flash-lite",
                 temperature=0.3,
@@ -142,7 +128,6 @@ class ChatService:
             
             chain = prompt | model | StrOutputParser()
             
-            # Generate response
             response_text = chain.invoke({
                 "context": context,
                 "topics": topics,
@@ -150,7 +135,6 @@ class ChatService:
                 "questions": questions
             })
             
-            # Parse JSON response
             try:
                 json_start = response_text.find('{')
                 json_end = response_text.rfind('}') + 1

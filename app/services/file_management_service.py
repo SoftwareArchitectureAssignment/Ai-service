@@ -7,6 +7,7 @@ from app.schemas.files import FileMetadata, ProcessFilesResponse
 from app.services.pdf import process_files_from_urls
 from app.services.rag import delete_vectors_by_file_id
 from app.core.mongodb import db
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -70,15 +71,13 @@ class FileManagementService:
     def delete_pdf_file(file_id: str) -> bool:
         try:
             result = db.files.delete_one({"_id": ObjectId(file_id)})
-            
+            _id_ai_service=db.files.find_one({"file_id": file_id}).get("_id")
             if result.deleted_count == 0:
                 raise ValueError(f"PDF file with ID {file_id} not found")
             
-            delete_vectors_by_file_id(file_id)
+            delete_vectors_by_file_id(file_id, file_id_AI_service=_id_ai_service, api_key=settings.API_KEY)
             
             return True
-        except ValueError:
-            raise
         except Exception as e:
             logger.error(f"Error deleting PDF file: {e}")
             raise ValueError(f"Failed to delete PDF file: {str(e)}")
