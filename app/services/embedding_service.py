@@ -12,13 +12,15 @@ class EmbeddingService:
     def __init__(self, repository: IEmbeddingRepository):
         self.repository = repository
     
-    async def ingest_course(self, course_id: int, course_name: str, description: Optional[str] = None) -> bool:
+    async def ingest_course(self, course_id: int, course_name: str, description: Optional[str] = None, topic: Optional[str] = None, course_uid: Optional[str] = None) -> bool:
         try:
             course_text = f"Course: {course_name}\n"
             if description:
-                course_text += f"Description: {description}"
+                course_text += f"Description: {description}\n"
             else:
-                course_text += "Description: No description provided"
+                course_text += "Description: No description provided\n"
+            if topic:
+                course_text += f"Topic: {topic}"
             
             text_chunks = get_text_chunks(course_text, settings.MODEL_NAME)
             
@@ -29,7 +31,9 @@ class EmbeddingService:
             metadatas = [
                 {
                     "course_id": str(course_id),
+                    "course_uid": course_uid or str(course_id),
                     "course_name": course_name,
+                    "topic": topic or "unknown",
                     "chunk_index": i
                 }
                 for i in range(len(text_chunks))
@@ -44,10 +48,10 @@ class EmbeddingService:
             logger.error(f"Error ingesting course {course_id}: {e}", exc_info=True)
             return False
     
-    async def update_course(self, course_id: int, course_name: str, description: Optional[str] = None) -> bool:
+    async def update_course(self, course_id: int, course_name: str, description: Optional[str] = None, topic: Optional[str] = None, course_uid: Optional[str] = None) -> bool:
         try:
             await self.repository.delete_embeddings(course_id)
-            success = await self.ingest_course(course_id, course_name, description)
+            success = await self.ingest_course(course_id, course_name, description, topic, course_uid)
             
             if not success:
                 logger.error(f"Failed to update embeddings for course {course_id}")

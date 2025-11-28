@@ -11,5 +11,7 @@ class CourseUpdateEvent(BaseModel):
     courseId: int
     courseName: str
     courseDescription: Optional[str] = None
+    topic: Optional[str] = None
+    courseUid: Optional[str] = None  # Unique identifier for the course
     action: CourseAction 
     timestamp: int

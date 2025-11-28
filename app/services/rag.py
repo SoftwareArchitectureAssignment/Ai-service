@@ -116,8 +116,6 @@ def delete_vectors_by_file_id(file_id: str, file_id_AI_service: str, api_key: st
         docs_deleted_count = 0
         
         if hasattr(vector_store, 'docstore') and hasattr(vector_store.docstore, '_dict'):
-            print("Iterating over documents in FAISS index for deletion")
-
             for doc_id, doc in vector_store.docstore._dict.items():
                 metadata = doc.metadata if hasattr(doc, 'metadata') else {}
                 

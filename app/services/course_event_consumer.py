@@ -74,20 +74,24 @@ class CourseEventConsumer:
                 success = await self.embedding_service.ingest_course(
                     course_id=event.courseId,
                     course_name=event.courseName,
-                    description=event.courseDescription
+                    description=event.courseDescription,
+                    topic=event.topic,
+                    course_uid=event.courseUid
                 )
                 
                 if success:
-                    logger.info(f"Successfully {event.courseId}")
+                    logger.info(f"Successfully created course {event.courseId}")
                 else:
-                    logger.error(f"Failed {event.courseId}")
+                    logger.error(f"Failed to create course {event.courseId}")
                 return success
                 
             elif event.action == "UPDATE":
                 success = await self.embedding_service.update_course(
                     course_id=event.courseId,
                     course_name=event.courseName,
-                    description=event.courseDescription
+                    description=event.courseDescription,
+                    topic=event.topic,
+                    course_uid=event.courseUid
                 )
                 
                 if success:
@@ -157,6 +161,8 @@ class CourseEventConsumer:
                 courseId=int(data.get("courseId", 0)),
                 courseName=data.get("courseName", ""),
                 courseDescription=data.get("courseDescription"),
+                topic=data.get("topic"),
+                courseUid=data.get("courseUid"),
                 action=data.get("action", ""),
                 timestamp=int(data.get("timestamp", 0))
             )

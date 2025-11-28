@@ -20,7 +20,6 @@ class ChatService:
     
     async def evaluate_question(self, question: str, question_uid: str) -> str:
         try:
-            logger.info(f"Evaluating question: {question}")
             
             if not self.api_key:
                 raise HTTPException(status_code=400, detail="API key not configured")
@@ -63,7 +62,6 @@ class ChatService:
                 "question": question
             })
             
-            logger.info(f"✅ Generated response for question {question_uid}")
             return response
         except Exception as e:
             logger.error(f"Error evaluating question: {e}", exc_info=True)
@@ -84,7 +82,15 @@ class ChatService:
             if not docs:
                 raise HTTPException(status_code=404, detail="No relevant courses found for these topics.")
             
-            context = "\n\n".join([doc.page_content for doc in docs])
+            # Build context with course metadata including uid
+            context_parts = []
+            for doc in docs:
+                metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+                course_uid = metadata.get('course_uid', 'unknown')
+                course_name = metadata.get('course_name', 'Unknown Course')
+                context_parts.append(f"{doc.page_content}\nCourse UID: {course_uid}")
+            
+            context = "\n\n".join(context_parts)
             
             prompt_template = """
             Based on the provided course catalog and learning requirements, create a comprehensive learning path.
@@ -98,7 +104,7 @@ class ChatService:
             
             Please provide:
             1. General advice for this learning path
-            2. Recommended courses with their details
+            2. Recommended courses with their details and exact Course UID from the available courses
             3. Explanation of why these courses are recommended
             
             Format your response as JSON with this structure:
@@ -107,12 +113,14 @@ class ChatService:
                 "recommendedLearningPaths": [
                     {{
                         "course_name": "Course Name",
-                        "course_uid": "unique_identifier",
+                        "course_uid": "exact_uid_from_available_courses",
                         "description": "Course description"
                     }}
                 ],
                 "explanation": "Why these courses are recommended"
             }}
+            
+            IMPORTANT: The course_uid MUST be taken directly from the "Course UID:" field in the available courses above.
             """
             
             model = ChatGoogleGenerativeAI(
@@ -151,7 +159,6 @@ class ChatService:
                     "explanation": "Could not parse structured response"
                 }
             
-            logger.info(f"✅ Generated learning path successfully")
             return parsed_response
         except Exception as e:
             logger.error(f"Error generating learning path: {e}", exc_info=True)
