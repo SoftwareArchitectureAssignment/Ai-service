@@ -83,20 +83,25 @@ class ChatService:
                     detail="No relevant courses found for these topics."
                 )
             
+            # Build context with course metadata including uid
             context = self.context_builder.build_context_with_metadata(docs)
             
+            # Build learning path prompt
             prompt_template, variables = self.prompt_builder.build_learning_path_prompt(
                 context,
                 topics,
                 level or "beginner",
                 questions
             )
+            
+            # Generate response using AI provider
             response = await self.ai_provider.generate_response(
                 prompt_template,
                 temperature=0.3,
                 variables=variables
             )
             
+            # Parse learning path response with fallback handling
             return self.response_parser.parse_learning_path_response(response)
             
         except HTTPException:
