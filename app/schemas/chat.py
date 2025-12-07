@@ -26,3 +26,15 @@ class LearningPathResponse(BaseModel):
     advice: str
     recommendedLearningPaths: List[CourseRecommendation]
     explanation: str
+
+
+class ChatFreeRequest(BaseModel):
+    message: str
+    chat_uid: str
+
+
+class ChatFreeResponse(BaseModel):
+    answer: str
+    chat_uid: str
+    timestamp: str
+    model_name: str

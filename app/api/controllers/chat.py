@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter
-from app.schemas.chat import ChatRequest, ChatResponse, LearningPathRequest, LearningPathResponse
+from app.schemas.chat import ChatRequest, ChatResponse, LearningPathRequest, LearningPathResponse, ChatFreeRequest, ChatFreeResponse
 from app.core.config import settings
 from app.core.container import container
 
@@ -37,3 +37,14 @@ async def get_learning_path(request: LearningPathRequest) -> LearningPathRespons
             recommendedLearningPaths=learning_path.get("recommendedLearningPaths", []),
             explanation=learning_path.get("explanation", "")
         )
+
+
+@router.post("/chat-free", response_model=ChatFreeResponse)
+async def chat_free(request: ChatFreeRequest) -> ChatFreeResponse:
+    answer = await chat_service.chat_free(request.message)
+    return ChatFreeResponse(
+        answer=answer,
+        chat_uid=request.chat_uid,
+        timestamp=settings.now_string(),
+        model_name=settings.MODEL_NAME
+    )

@@ -159,3 +159,40 @@ class ChatService:
         except Exception as e:
             logger.error(f"Error generating learning path: {e}", exc_info=True)
             raise
+    
+    async def chat_free(self, message: str) -> str:
+      
+        try:
+            if not self.api_key:
+                raise HTTPException(status_code=400, detail="API key not configured")
+            
+            prompt_template = """
+            You are a helpful AI assistant. Answer the user's question or respond to their message in a clear and helpful manner.
+            
+            User Message: {message}
+            
+            Please provide a helpful response.
+            """
+            
+            model = ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash-lite",
+                temperature=0.7,
+                google_api_key=self.api_key
+            )
+            
+            prompt = LCPromptTemplate(
+                template=prompt_template,
+                input_variables=["message"]
+            )
+            
+            chain = prompt | model | StrOutputParser()
+            
+            response = chain.invoke({
+                "message": message
+            })
+            
+            return response
+        except Exception as e:
+            logger.error(f"Error in free chat: {e}", exc_info=True)
+            raise
+
