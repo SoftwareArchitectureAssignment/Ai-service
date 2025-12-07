@@ -83,20 +83,17 @@ class ChatService:
                 raise HTTPException(status_code=404, detail="No relevant courses found for these topics.")
             
             # Build context with course metadata including uid
-            context_parts = []
-            for doc in docs:
-                metadata = doc.metadata if hasattr(doc, 'metadata') else {}
-                course_uid = metadata.get('course_uid', 'unknown')
-                course_name = metadata.get('course_name', 'Unknown Course')
-                context_parts.append(f"{doc.page_content}\nCourse UID: {course_uid}")
+            # context_parts = []
+            # for doc in docs:
+            #     metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+            #     course_uid = metadata.get('course_uid', 'unknown')
+            #     course_name = metadata.get('course_name', 'Unknown Course')
+            #     context_parts.append(f"{doc.page_content}\nCourse UID: {course_uid}")
             
-            context = "\n\n".join(context_parts)
+            # context = "\n\n".join(context_parts)
             
             prompt_template = """
             Based on the provided course catalog and learning requirements, create a comprehensive learning path.
-            
-            Available Courses:
-            {context}
             
             Topics to learn: {topics}
             Current level: {level}
@@ -131,13 +128,12 @@ class ChatService:
             
             prompt = LCPromptTemplate(
                 template=prompt_template,
-                input_variables=["context", "topics", "level", "questions"]
+                input_variables=["topics", "level", "questions"]
             )
             
             chain = prompt | model | StrOutputParser()
             
             response_text = chain.invoke({
-                "context": context,
                 "topics": topics,
                 "level": level or "beginner",
                 "questions": questions
