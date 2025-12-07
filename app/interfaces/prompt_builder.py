@@ -10,7 +10,6 @@ class IPromptBuilder(ABC):
     @abstractmethod
     def build_learning_path_prompt(
         self,
-        context: str,
         topics: str,
         level: str,
         questions: str

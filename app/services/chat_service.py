@@ -84,11 +84,10 @@ class ChatService:
                 )
             
             # Build context with course metadata including uid
-            context = self.context_builder.build_context_with_metadata(docs)
+            # context = self.context_builder.build_context_with_metadata(docs)
             
             # Build learning path prompt
             prompt_template, variables = self.prompt_builder.build_learning_path_prompt(
-                context,
                 topics,
                 level or "beginner",
                 questions

@@ -21,7 +21,6 @@ class PromptBuilder(IPromptBuilder):
     
     def build_learning_path_prompt(
         self,
-        context: str,
         topics: str,
         level: str,
         questions: str
@@ -29,8 +28,6 @@ class PromptBuilder(IPromptBuilder):
         prompt_template = """
         Based on the provided course catalog and learning requirements, create a comprehensive learning path.
         
-        Available Courses:
-        {context}
         
         Topics to learn: {topics}
         Current level: {level}
@@ -57,7 +54,6 @@ class PromptBuilder(IPromptBuilder):
         IMPORTANT: The course_uid MUST be taken directly from the "Course UID:" field in the available courses above.
         """
         return prompt_template, {
-            "context": context,
             "topics": topics,
             "level": level,
             "questions": questions
